@@ -1,7 +1,7 @@
 package fpcp
 
 import (
-	"golang.org/x/net/context"
+	"strconv"
 )
 
 type (
@@ -58,25 +58,50 @@ type (
 		PersonId string `json:"personId"`
 	}
 
-	// The RequestsListener is implemented by Frame Processor and requested
-	// by transport implementation to get the data
-	RequestsListener interface {
-		GetImage(imgId string) (*Image, error)
-		GetPerson(personId string) (*Person, error)
-		GetScene() *Scene
+	RespListener func(fpId string, resp *Resp)
+	ReqListener  func(req *Req)
+
+	// The interface is implemented by transport provider from Scene processor side
+	SceneProcEnd interface {
+		// Upstream coming events
+		RespListener(rl RespListener)
+		// Downstream sent events
+		SendReq(fpId string, req *Req) error
 	}
 
-	FrameProcessor interface {
-		// Returns the Frame Processor identifier
-		GetId() string
-		GetImage(ctx context.Context, imgId string) (*Image, error)
-		GetPerson(ctx context.Context, personId string) (*Person, error)
-		GetScene(ctx context.Context) (*Scene, error)
+	// This interface is implemented by transport provider for Frame Proc side
+	FrameProcEnd interface {
+		// Downstream coming events
+		ReqListener(rl ReqListener)
+		// Upstream sent events
+		SendResp(resp *Resp)
 	}
 
-	SceneListener func(fp FrameProcessor, scene *Scene)
+	Error int
 )
 
 const (
 	ERR_NOT_FOUND = 1
+	ERR_CLOSED    = 2
 )
+
+func CheckError(e error, expErr Error) bool {
+	if e == nil {
+		return false
+	}
+	err, ok := e.(Error)
+	if !ok {
+		return false
+	}
+	return err == expErr
+}
+
+func (e Error) Error() string {
+	switch e {
+	case ERR_NOT_FOUND:
+		return "Not found."
+	case ERR_CLOSED:
+		return "Already closed"
+	}
+	return "Unknown. Code=" + strconv.Itoa(int(e))
+}
