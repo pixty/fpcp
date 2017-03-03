@@ -3,6 +3,8 @@ package fpcp
 import (
 	"fmt"
 	"strconv"
+	"sync"
+	"time"
 )
 
 type (
@@ -59,10 +61,15 @@ type (
 		PersonId string `json:"personId"`
 	}
 
+	// The response listener is on SP side and it is notified every time when
+	// the response is received
 	RespListener func(fpId string, resp *Resp)
-	ReqListener  func(req *Req)
 
-	// The interface is implemented by transport provider from Scene processor side
+	// The request listener resides on FP side and it is notified every time
+	// when request is received
+	ReqListener func(req *Req)
+
+	// The interface is implemented by transport provider on SP side
 	SceneProcEnd interface {
 		// Upstream coming events
 		RespListener(rl RespListener)
@@ -78,12 +85,25 @@ type (
 		SendResp(resp *Resp)
 	}
 
+	// Scene listener (see SceneProcessor)
+	SceneListener func(fpId string, scene *Scene)
+
+	SceneProcessor struct {
+		lock   sync.Mutex
+		spe    SceneProcEnd
+		rmap   map[string]chan *Resp
+		reqId  int64
+		callTO time.Duration
+		sl     SceneListener
+	}
+
 	Error int
 )
 
 const (
 	ERR_NOT_FOUND = 1
 	ERR_CLOSED    = 2
+	ERR_TIMEOUT   = 3
 )
 
 func CheckError(e error, expErr Error) bool {
@@ -103,8 +123,95 @@ func (e Error) Error() string {
 		return "Not found."
 	case ERR_CLOSED:
 		return "Already closed"
+	case ERR_TIMEOUT:
+		return "Timeout"
 	}
 	return "Unknown. Code=" + strconv.Itoa(int(e))
+}
+
+func NewSceneProcessor(spe SceneProcEnd, sl SceneListener, callTOSec int) *SceneProcessor {
+	sp := new(SceneProcessor)
+	sp.spe = spe
+	sp.reqId = time.Now().Unix()
+	spe.RespListener(sp.onResp)
+	sp.sl = sl
+	sp.callTO = time.Duration(callTOSec) * time.Second
+	return sp
+}
+
+func (sp *SceneProcessor) GetImage(fpId, imgId string) (*Image, error) {
+	req, ch := sp.newRequest(false)
+	req.ImgId = imgId
+	sp.spe.SendReq(fpId, req)
+	resp, err := sp.waitResponse(req, ch)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Image, nil
+}
+
+func (sp *SceneProcessor) GetPerson(fpId, personId string) (*Person, error) {
+	req, ch := sp.newRequest(false)
+	req.PersonId = personId
+	sp.spe.SendReq(fpId, req)
+	resp, err := sp.waitResponse(req, ch)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Person, nil
+}
+
+func (sp *SceneProcessor) RequestScene(fpId string) {
+	req, _ := sp.newRequest(true)
+	req.Scene = true
+	sp.spe.SendReq(fpId, req)
+}
+
+func (sp *SceneProcessor) newRequest(async bool) (*Req, chan *Resp) {
+	sp.lock.Lock()
+	defer sp.lock.Unlock()
+
+	sp.reqId++
+	req := new(Req)
+	req.ReqId = strconv.FormatInt(sp.reqId, 10)
+	var ch chan *Resp
+	if !async {
+		ch = make(chan *Resp)
+		sp.rmap[req.ReqId] = ch
+	}
+	return req, ch
+}
+
+func (sp *SceneProcessor) waitResponse(req *Req, ch chan *Resp) (resp *Resp, err error) {
+	select {
+	case resp = <-ch:
+	case <-time.After(sp.callTO):
+		err = Error(ERR_TIMEOUT)
+		sp.notify(req.ReqId, nil)
+	}
+	return resp, err
+}
+
+func (sp *SceneProcessor) onResp(fpId string, resp *Resp) {
+	if resp.Scene != nil {
+		sp.sl(fpId, resp.Scene)
+		return
+	}
+
+	sp.notify(resp.ReqId, resp)
+}
+
+func (sp *SceneProcessor) notify(reqId string, resp *Resp) {
+	sp.lock.Lock()
+	defer sp.lock.Unlock()
+
+	ch, _ := sp.rmap[reqId]
+	if ch != nil {
+		ch <- resp
+		close(ch)
+		delete(sp.rmap, reqId)
+	}
+
 }
 
 func (rs RectSize) String() string {
