@@ -134,6 +134,7 @@ func NewSceneProcessor(spe SceneProcEnd, sl SceneListener, callTOSec int) *Scene
 	sp.spe = spe
 	sp.reqId = time.Now().Unix()
 	spe.RespListener(sp.onResp)
+	sp.rmap = make(map[string]chan *Resp)
 	sp.sl = sl
 	sp.callTO = time.Duration(callTOSec) * time.Second
 	return sp
@@ -189,6 +190,12 @@ func (sp *SceneProcessor) waitResponse(req *Req, ch chan *Resp) (resp *Resp, err
 		err = Error(ERR_TIMEOUT)
 		sp.notify(req.ReqId, nil)
 	}
+
+	if resp.Error > 0 {
+		err = Error(resp.Error)
+		resp = nil
+	}
+
 	return resp, err
 }
 
@@ -211,7 +218,6 @@ func (sp *SceneProcessor) notify(reqId string, resp *Resp) {
 		close(ch)
 		delete(sp.rmap, reqId)
 	}
-
 }
 
 func (rs RectSize) String() string {
