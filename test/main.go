@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/pixty/fpcp"
+
 	"github.com/jrivets/log4g"
 	"gopkg.in/gin-gonic/gin.v1"
 )
@@ -18,13 +20,62 @@ func main() {
 	defer log4g.Shutdown()
 
 	ge := gin.New()
-	ge.POST("/stream/:fpId", post)
+	//	ge.POST("/stream/:fpId", post)
+	//	go func() {
+	//		time.Sleep(time.Second)
+	//		clientPost()
+	//	}()
+
+	log4g.SetLogLevel("fpcp", log4g.TRACE)
+
+	sp := fpcp.NewHttpSceneProcessor(log4g.GetLogger(""), 10)
+	sp.RespListener(onResp)
+	fp := fpcp.NewHttpFrameProcessor(log4g.GetLogger(""), "jopa", "http://127.0.0.1:5555/fpcp/", 30, 5)
+	fp.ReqListener(onReq)
+
+	ge.POST("/fpcp/:fpId", sp.POSTHandler)
+	ge.GET("/fpcp/:fpId", sp.GETHandler)
 	go func() {
 		time.Sleep(time.Second)
-		clientPost()
+		log := log4g.GetLogger("test")
+
+		image := &fpcp.Image{}
+		image.Id = "ImageTestId"
+		image.Size = fpcp.RectSize{100, 200}
+		image.Data = []byte("tested data")
+
+		resp := &fpcp.Resp{}
+		resp.ReqId = "ImageTestId"
+		resp.Error = 1234
+		resp.Image = image
+
+		log.Info("Sending response ", resp)
+		err := fp.SendResp(resp)
+		if err != nil {
+			log.Error("Got error while sending response err=", err)
+		}
+
+		req := &fpcp.Req{}
+		req.ImgId = "1234"
+		err = sp.SendReq("jopa", req)
+		if err != nil {
+			log.Error("Got error while sending request err=", err)
+		}
+
+		time.Sleep(10 * time.Second)
+		fp.Close()
+
 	}()
 	ge.Run("0.0.0.0:5555")
 
+}
+
+func onResp(fpId string, resp *fpcp.Resp) {
+	log4g.GetLogger("onResponse").Info("GOT ", resp)
+}
+
+func onReq(req *fpcp.Req) {
+	log4g.GetLogger("onRequest").Info("GOT ", req)
 }
 
 func post(c *gin.Context) {
@@ -70,7 +121,7 @@ func post(c *gin.Context) {
 func clientPost() error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", filepath.Base("/some-file"))
+	part, err := writer.CreateFormFile("jopa", filepath.Base("ttt"))
 	if err != nil {
 		return err
 	}

@@ -1,1 +1,1 @@
-# fpcp
+# Frame Processor Communication Protocol (FPCP)

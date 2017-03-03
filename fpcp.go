@@ -1,6 +1,7 @@
 package fpcp
 
 import (
+	"fmt"
 	"strconv"
 )
 
@@ -104,4 +105,36 @@ func (e Error) Error() string {
 		return "Already closed"
 	}
 	return "Unknown. Code=" + strconv.Itoa(int(e))
+}
+
+func (rs RectSize) String() string {
+	return "{w=" + strconv.Itoa(rs.W) + ", h=" + strconv.Itoa(rs.H) + "}"
+}
+
+func (r Rect) String() string {
+	return "{l=" + strconv.Itoa(r.L) + ", t=" + strconv.Itoa(r.T) + ", r=" + strconv.Itoa(r.R) + ", b=" + strconv.Itoa(r.B) + "}"
+}
+
+func (i *Image) String() string {
+	return fmt.Sprint("{id=", i.Id, ", size=", i.Size, ", ts=", i.Timestamp, ", data=", string(i.Data), "}")
+}
+
+func (f *Face) String() string {
+	return fmt.Sprint("{imgId=", f.ImgId, ", region=", f.Region, "}")
+}
+
+func (p *Person) String() string {
+	return fmt.Sprint("{id=", p.Id, ", seenAt=", p.FirstSeenAt, ", lostAt=", p.LostAt, ", faces=", p.Faces, "}")
+}
+
+func (s *Scene) String() string {
+	return fmt.Sprint("{ts=", s.Timestamp, ", persons=", s.Persons, "}")
+}
+
+func (r *Resp) String() string {
+	return fmt.Sprint("{reqId=", r.ReqId, ", error=", r.Error, ", image=", r.Image, ", scene=", r.Scene, ", person=", r.Person, "}")
+}
+
+func (r *Req) String() string {
+	return fmt.Sprint("{reqId=", r.ReqId, ", scene=", r.Scene, ", imageId=", r.ImgId, ", personId=", r.PersonId, "}")
 }
