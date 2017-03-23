@@ -11,39 +11,39 @@ type (
 	Timestamp int64
 
 	RectSize struct {
-		W int `json:"w"`
-		H int `json:"h"`
+		W int `json:"w" bson:"w"`
+		H int `json:"h" bson:"h"`
 	}
 
 	Rect struct {
-		L int `json:"l"`
-		T int `json:"t"`
-		R int `json:"r"`
-		B int `json:"b"`
+		L int `json:"l" bson:"l"`
+		T int `json:"t" bson:"t"`
+		R int `json:"r" bson:"r"`
+		B int `json:"b" bson:"b"`
 	}
 
 	Image struct {
-		Id        string    `json:"id"`
-		Size      RectSize  `json:"size"`
-		Timestamp Timestamp `json:"timestamp"`
-		Data      []byte    `json:"data"`
+		Id        string    `json:"id" bson:"id"`
+		Size      RectSize  `json:"size" bson:"size"`
+		Timestamp Timestamp `json:"timestamp" bson:"timestamp"`
+		Data      []byte    `json:"data" bson:"data"`
 	}
 
 	Face struct {
-		ImgId  string `json:"imgId"`
-		Region Rect   `json:"region"`
+		ImgId  string `json:"imgId" bson:"imgId"`
+		Region Rect   `json:"region" bson:"region"`
 	}
 
 	Person struct {
-		Id          string    `json:"id"`
-		FirstSeenAt Timestamp `json:"firstSeenAt"`
-		LostAt      Timestamp `json:"lostAt"`
-		Faces       []*Face   `json:"faces"`
+		Id          string    `json:"id" bson:"id"`
+		FirstSeenAt Timestamp `json:"firstSeenAt" bson:"firstSeenAt"`
+		LostAt      Timestamp `json:"lostAt" bson:"lostAt"`
+		Faces       []*Face   `json:"faces" bson:"faces"`
 	}
 
 	Scene struct {
-		Timestamp Timestamp `json:"timestamp"`
-		Persons   []*Person `json:"persons"`
+		Timestamp Timestamp `json:"timestamp" bson:"timestamp"`
+		Persons   []*Person `json:"persons" bson:"persons"`
 	}
 
 	Resp struct {

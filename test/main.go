@@ -57,7 +57,9 @@ func main() {
 
 		req := &fpcp.Req{}
 		req.ImgId = "1234"
-		err = sp.SendReq("jopa", req)
+		req.ReqId = "1234123"
+		req.Scene = true
+		err = sp.SendReq("1234", req)
 		if err != nil {
 			log.Error("Got error while sending request err=", err)
 		}
