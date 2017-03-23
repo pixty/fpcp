@@ -8,6 +8,7 @@ import (
 )
 
 type (
+	// Timestamp in milliseconds
 	Timestamp int64
 
 	RectSize struct {
