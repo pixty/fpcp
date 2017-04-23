@@ -7,8 +7,10 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"path/filepath"
-	"time"
+	//	"strconv"
+	//	"time"
 
 	"github.com/pixty/fpcp"
 
@@ -35,45 +37,58 @@ func main() {
 
 	ge.POST("/fpcp/:fpId", sp.POSTHandler)
 	ge.GET("/fpcp/:fpId", sp.GETHandler)
-	go func() {
-		time.Sleep(time.Second)
-		log := log4g.GetLogger("test")
+	//	go func() {
+	//		time.Sleep(time.Second)
+	//		log := log4g.GetLogger("test")
 
-		image := &fpcp.Image{}
-		image.Id = "ImageTestId"
-		image.Size = fpcp.RectSize{100, 200}
-		image.Data = []byte("tested data")
+	//		image := &fpcp.Image{}
+	//		image.Id = "ImageTestId"
+	//		image.Size = fpcp.RectSize{100, 200}
+	//		image.Data = []byte("tested data")
 
-		resp := &fpcp.Resp{}
-		resp.ReqId = "ImageTestId"
-		resp.Error = 1234
-		resp.Image = image
+	//		resp := &fpcp.Resp{}
+	//		resp.ReqId = "ImageTestId"
+	//		resp.Error = 1234
+	//		resp.Image = image
 
-		log.Info("Sending response ", resp)
-		err := fp.SendResp(resp)
-		if err != nil {
-			log.Error("Got error while sending response err=", err)
-		}
+	//		log.Info("Sending response ", resp)
+	//		err := fp.SendResp(resp)
+	//		if err != nil {
+	//			log.Error("Got error while sending response err=", err)
+	//		}
 
-		req := &fpcp.Req{}
-		req.ImgId = "1234"
-		req.ReqId = "1234123"
-		req.Scene = true
-		err = sp.SendReq("1234", req)
-		if err != nil {
-			log.Error("Got error while sending request err=", err)
-		}
+	//		req := &fpcp.Req{}
+	//		req.ImgId = "1234"
+	//		req.ReqId = "1234123"
+	//		req.Scene = true
+	//		err = sp.SendReq("1234", req)
+	//		if err != nil {
+	//			log.Error("Got error while sending request err=", err)
+	//		}
 
-		time.Sleep(10 * time.Second)
-		fp.Close()
+	//		time.Sleep(10 * time.Second)
+	//		fp.Close()
 
-	}()
+	//	}()
 	ge.Run("0.0.0.0:5555")
 
 }
 
 func onResp(fpId string, resp *fpcp.Resp) {
-	log4g.GetLogger("onResponse").Info("GOT ", resp)
+	log := log4g.GetLogger("onResponse")
+	log.Info("GOT ", resp)
+
+	if resp.Scene != nil && resp.Image != nil && resp.Scene.ImageId == resp.Image.Id {
+		log.Info("Got scene with an Image")
+		fn := "/Users/dmitry/frame_processor/image" + resp.Image.Id + ".png"
+		f, err := os.Create(fn)
+		if err == nil {
+			n, err := f.Write(resp.Image.Data)
+			log.Info(n, " bytes written into ", fn, ", err=", err)
+		} else {
+			log.Error("Could not open file err=", err)
+		}
+	}
 }
 
 func onReq(req *fpcp.Req) {

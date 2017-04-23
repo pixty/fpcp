@@ -125,13 +125,15 @@ func (sp *HttpSceneProcessor) POSTHandler(c *gin.Context) {
 		return
 	}
 
-	resp := &Resp{}
-	err = json.Unmarshal([]byte(jn[0]), resp)
+	var resp Resp
+	err = json.Unmarshal([]byte(jn[0]), &resp)
 	if err != nil {
 		sp.logger.Warn("Could not unmarshal ", jn[0])
 		c.JSON(http.StatusBadRequest, "Could not unmarshal response")
 		return
 	}
+
+	sp.logger.Info("Values=", len(form.Value), ", files=", len(form.File))
 
 	fh, ok := form.File["image"]
 	if ok {
@@ -146,10 +148,15 @@ func (sp *HttpSceneProcessor) POSTHandler(c *gin.Context) {
 		if resp.Image != nil {
 			resp.Image.Data = bb.Bytes()
 		}
+	} else {
+		buf, ok := form.Value["image"]
+		if ok && resp.Image != nil {
+			resp.Image.Data = []byte(buf[0])
+		}
 	}
 
 	if sp.rl != nil {
-		sp.rl(fpId, resp)
+		sp.rl(fpId, &resp)
 	} else {
 		sp.logger.Warn("No response listener, nobody will be notified")
 	}

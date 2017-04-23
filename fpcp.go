@@ -24,8 +24,8 @@ type (
 	}
 
 	Image struct {
-		Id        string    `json:"id" bson:"id"`
-		Size      RectSize  `json:"size" bson:"size"`
+		Id        string    `json:"imgId" bson:"imgId"`
+		Region    Rect      `json:"region" bson:"region"`
 		Timestamp Timestamp `json:"timestamp" bson:"timestamp"`
 		Data      []byte    `json:"data" bson:"data"`
 	}
@@ -43,6 +43,7 @@ type (
 	}
 
 	Scene struct {
+		ImageId   string    `json:"imgId" bson:"imgId"`
 		Timestamp Timestamp `json:"timestamp" bson:"timestamp"`
 		Persons   []*Person `json:"persons" bson:"persons"`
 	}
@@ -230,7 +231,7 @@ func (r Rect) String() string {
 }
 
 func (i *Image) String() string {
-	return fmt.Sprint("{id=", i.Id, ", size=", i.Size, ", ts=", i.Timestamp, ", data=", string(i.Data), "}")
+	return fmt.Sprint("{id=", i.Id, ", region=", i.Region, ", ts=", i.Timestamp, ", data=", len(i.Data), "}")
 }
 
 func (f *Face) String() string {
@@ -242,7 +243,7 @@ func (p *Person) String() string {
 }
 
 func (s *Scene) String() string {
-	return fmt.Sprint("{ts=", s.Timestamp, ", persons=", s.Persons, "}")
+	return fmt.Sprint("{imgId=", s.ImageId, ", ts=", s.Timestamp, ", persons=", s.Persons, "}")
 }
 
 func (r *Resp) String() string {
